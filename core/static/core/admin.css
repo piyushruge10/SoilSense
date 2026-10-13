@@ -1,0 +1,462 @@
+:root {
+  --primary: #39764d;
+  --secondary: #2f6541;
+  --accent: #4d8c60;
+  --header-bg: #203c2a;
+  --header-color: #fff;
+  --link-fg: #39764d;
+  --link-hover-color: #244f32;
+  --selected-row: #edf5ee;
+  --body-bg: #f5f7f3;
+  --darkened-bg: #f0f4ef;
+  --hairline-color: #e2e9e1;
+  --border-color: #dfe7dd;
+  --button-hover-bg: #2f6541;
+  --default-button-bg: #39764d;
+  --default-button-hover-bg: #2f6541;
+}
+
+body,
+input,
+textarea,
+select,
+button {
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  color: #29392e;
+}
+
+#header {
+  min-height: 64px;
+  padding: 0 28px;
+  box-shadow: 0 3px 14px rgba(18, 43, 26, .12);
+}
+
+#branding {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+}
+
+#site-name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+}
+
+#site-name a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+}
+
+#site-name a:hover {
+  color: #e3f0e4;
+}
+
+#site-name b {
+  margin-left: 5px;
+  color: #b9d9bf;
+  font-size: 9px;
+  letter-spacing: 1.4px;
+}
+
+.soil-admin-mark {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: #e6f1e7;
+  color: #2f6541;
+  font-size: 18px;
+}
+
+#user-tools {
+  padding: 0;
+  font-size: 11px;
+}
+
+#user-tools a {
+  color: #d8eadb;
+  border-bottom-color: rgba(216, 234, 219, .45);
+}
+
+#user-tools a:hover {
+  color: #fff;
+}
+
+.soil-admin-home {
+  display: inline-block;
+  margin: 0 0 0 26px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 7px;
+  color: #e3f0e4 !important;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.soil-admin-home:hover {
+  background: rgba(255, 255, 255, .1);
+}
+
+#content {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 28px 34px 48px;
+}
+
+#content h1 {
+  color: #29392e;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -.45px;
+}
+
+#content-main,
+#content-related {
+  min-width: 0;
+}
+
+.breadcrumbs {
+  padding: 12px 34px;
+  background: #fff;
+  border-bottom: 1px solid #e5ebe3;
+  color: #7a877c;
+  font-size: 11px;
+}
+
+.breadcrumbs a {
+  color: #39764d;
+}
+
+.soil-admin-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 25px;
+  padding: 25px 28px;
+  border: 1px solid #dce8dc;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #fff 0%, #edf5ed 100%);
+  box-shadow: 0 6px 20px rgba(42, 75, 48, .045);
+}
+
+.soil-admin-welcome p {
+  margin: 0 0 8px;
+  color: #64806a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.soil-admin-welcome h1 {
+  margin: 0 0 6px;
+  font-size: 23px;
+}
+
+.soil-admin-welcome span {
+  color: #78847a;
+  font-size: 12px;
+}
+
+.soil-admin-welcome > a {
+  flex-shrink: 0;
+  padding: 11px 14px;
+  border-radius: 8px;
+  background: #39764d;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.soil-admin-welcome > a:hover {
+  background: #2f6541;
+}
+
+.soil-admin-welcome > a b {
+  margin-left: 6px;
+}
+
+.soil-admin-index {
+  width: 100%;
+}
+
+.soil-admin-app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.soil-admin-app {
+  overflow: hidden;
+  border: 1px solid #e2e9e1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(35, 58, 40, .035);
+}
+
+.soil-admin-app-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e8eee7;
+  background: #f8faf7;
+}
+
+.soil-admin-app-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: #eaf3eb;
+  color: #39764d;
+  font-size: 16px;
+}
+
+.soil-admin-app-heading h2 {
+  margin: 0;
+  color: #2d4232;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.soil-admin-model {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 55px;
+  padding: 11px 18px;
+  border-bottom: 1px solid #edf1ec;
+}
+
+.soil-admin-model:last-child {
+  border-bottom: 0;
+}
+
+.soil-admin-model:hover {
+  background: #f8faf7;
+}
+
+.soil-admin-model-name {
+  color: #35483a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.soil-admin-model-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 7px;
+}
+
+.soil-admin-model-actions a {
+  padding: 6px 9px;
+  border: 1px solid #e2e9e1;
+  border-radius: 6px;
+  color: #4a7052;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.soil-admin-model-actions a:hover {
+  border-color: #cfe0d0;
+  background: #edf5ed;
+}
+
+.soil-admin-empty {
+  padding: 28px;
+  border: 1px solid #e2e9e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.soil-admin-empty h2 {
+  margin-top: 0;
+  color: #35483a;
+  font-size: 16px;
+}
+
+.soil-admin-empty p {
+  color: #78847a;
+  font-size: 12px;
+}
+
+.module,
+.inline-group,
+.submit-row,
+.selector,
+#changelist,
+#changelist-form .results,
+.login #content-main {
+  overflow: hidden;
+  border: 1px solid #e2e9e1;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(35, 58, 40, .035);
+}
+
+.module caption,
+.inline-group h2 {
+  padding: 12px 16px;
+  background: #eff5ef;
+  color: #36523c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .35px;
+}
+
+.module table th,
+.module table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #edf1ec;
+  font-size: 11px;
+}
+
+.module table tr:last-child td {
+  border-bottom: 0;
+}
+
+.module table th a {
+  color: #39764d;
+}
+
+.object-tools a,
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.addlink,
+a.viewsitelink {
+  border-radius: 7px;
+}
+
+.object-tools a,
+.object-tools a:link,
+.object-tools a:visited {
+  background: #39764d;
+}
+
+.object-tools a:hover {
+  background: #2f6541;
+}
+
+#changelist-filter {
+  border: 1px solid #e2e9e1;
+  border-radius: 10px;
+  background: white;
+}
+
+#changelist-filter h2 {
+  background: #eff5ef;
+  color: #36523c;
+}
+
+#changelist-filter li.selected a {
+  color: #2f6541;
+  font-weight: 700;
+}
+
+#changelist table thead th {
+  background: #f3f6f2;
+}
+
+#changelist table tbody tr:hover {
+  background: #f5f9f4;
+}
+
+#changelist .paginator,
+.paginator {
+  padding: 12px 14px;
+  border-top: 1px solid #edf1ec;
+  color: #77847a;
+  font-size: 11px;
+}
+
+input,
+textarea,
+select,
+.vTextField {
+  border-color: #d8e1d7;
+  border-radius: 6px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #74a37e;
+  outline: 2px solid rgba(76, 137, 89, .14);
+}
+
+.form-row {
+  padding: 13px 0;
+  border-bottom: 1px solid #edf1ec;
+}
+
+.submit-row {
+  padding: 13px 14px;
+  background: #f4f7f3;
+}
+
+.login #content-main {
+  max-width: 430px;
+  margin: 35px auto;
+  padding: 25px;
+}
+
+.login #content-main h1 {
+  margin-top: 0;
+}
+
+.messagelist li {
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(30, 55, 34, .06);
+}
+
+@media (max-width: 767px) {
+  #header {
+    padding: 0 15px;
+  }
+
+  #content {
+    padding: 20px 14px 35px;
+  }
+
+  .breadcrumbs {
+    padding: 11px 15px;
+  }
+
+  .soil-admin-welcome {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .soil-admin-welcome h1 {
+    font-size: 20px;
+  }
+
+  .soil-admin-home {
+    margin-left: 10px;
+    font-size: 10px;
+  }
+
+  .soil-admin-app-grid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .soil-admin-welcome > a {
+    align-self: flex-start;
+  }
+}

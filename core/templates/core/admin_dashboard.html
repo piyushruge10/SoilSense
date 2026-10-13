@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% block title %}Admin center{% endblock %}
+{% block content %}
+<div class="admin-dashboard">
+<section class="page-heading">
+  <div><p class="eyebrow">ADMINISTRATION / CONTROL CENTER</p><h1>SoilSense administration</h1><p class="subtitle">Your central workspace for managing the monitoring platform.</p></div>
+  <a class="button button-primary admin-django-link" href="{% url 'admin:index' %}"><span>Open Django admin</span><span aria-hidden="true">↗</span></a>
+</section>
+<section class="admin-stat-grid" aria-label="Application overview">
+  <article class="metric-card admin-stat"><span class="admin-stat-icon">♙</span><span>USER ACCOUNTS</span><strong>{{ user_count }}</strong><a href="{% url 'admin:auth_user_changelist' %}">Manage users <b>→</b></a></article>
+  <article class="metric-card admin-stat"><span class="admin-stat-icon">⚙</span><span>SENSOR DEVICES</span><strong>{{ serial_configuration_count }}</strong><a href="{% url 'admin:core_serialconfiguration_changelist' %}">Device settings <b>→</b></a></article>
+  <article class="metric-card admin-stat"><span class="admin-stat-icon">◉</span><span>SENSOR READINGS</span><strong>{{ reading_count }}</strong><a href="{% url 'admin:core_sensordata_changelist' %}">View readings <b>→</b></a></article>
+  <article class="metric-card admin-stat"><span class="admin-stat-icon">❀</span><span>PLANT GUIDES</span><strong>{{ plant_count }}</strong><a href="{% url 'admin:core_plantcare_changelist' %}">Manage plant care <b>→</b></a></article>
+  <article class="metric-card admin-stat"><span class="admin-stat-icon">↗</span><span>PUBLISHED STATIONS</span><strong>{{ published_count }}</strong><a href="{% url 'admin:core_sharedsoilsettings_changelist' %}">Sharing controls <b>→</b></a></article>
+</section>
+<section class="admin-section">
+  <div class="community-heading"><div><p class="eyebrow">MANAGEMENT</p><h2>Application settings</h2></div><span class="admin-section-note">Choose an area to manage</span></div>
+  <div class="admin-card-grid">
+    <a class="panel admin-card" href="{% url 'admin:auth_user_changelist' %}"><span class="admin-card-icon">♙</span><span class="admin-card-copy"><strong>Accounts &amp; access</strong><small>Create, update, deactivate, or grant staff access to user accounts.</small><b>Manage accounts <span>→</span></b></span></a>
+    <a class="panel admin-card" href="{% url 'admin:core_serialconfiguration_changelist' %}"><span class="admin-card-icon">⚙</span><span class="admin-card-copy"><strong>Arduino configurations</strong><small>Review each user's serial port, baud rate, moisture threshold, and sample interval.</small><b>Manage devices <span>→</span></b></span></a>
+    <a class="panel admin-card" href="{% url 'admin:core_sensordata_changelist' %}"><span class="admin-card-icon">◉</span><span class="admin-card-copy"><strong>Sensor history</strong><small>Browse stored temperature, humidity, and soil-moisture measurements.</small><b>Review readings <span>→</span></b></span></a>
+    <a class="panel admin-card" href="{% url 'admin:core_plantcare_changelist' %}"><span class="admin-card-icon">❀</span><span class="admin-card-copy"><strong>Plant care library</strong><small>Add and edit plant guides and their recommended growing ranges.</small><b>Manage plant guides <span>→</span></b></span></a>
+    <a class="panel admin-card" href="{% url 'admin:core_sharedsoilsettings_changelist' %}"><span class="admin-card-icon">↗</span><span class="admin-card-copy"><strong>Sharing settings</strong><small>Review published profiles and manage whether each station is shared.</small><b>Manage sharing <span>→</span></b></span></a>
+    <a class="panel admin-card" href="{% url 'admin:index' %}"><span class="admin-card-icon">▤</span><span class="admin-card-copy"><strong>Django administration</strong><small>Open the full admin site for groups, permissions, and other registered data.</small><b>Open full admin <span>→</span></b></span></a>
+  </div>
+</section>
+</div>
+{% endblock %}

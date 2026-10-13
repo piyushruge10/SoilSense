@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div id="content-main" class="soil-admin-index">
+    <section class="soil-admin-welcome">
+      <div>
+        <p>SOILSENSE / CONTROL ROOM</p>
+        <h1>Platform management</h1>
+        <span>Manage your growing community, sensor data, and plant library.</span>
+      </div>
+      <a href="{% url 'admin-dashboard' %}">Open control center <b>→</b></a>
+    </section>
+
+    {% if app_list %}
+      <div class="soil-admin-app-grid">
+        {% for app in app_list %}
+          <section class="soil-admin-app">
+            <div class="soil-admin-app-heading">
+              <span class="soil-admin-app-icon">{% if app.app_label == "auth" %}♙{% else %}◈{% endif %}</span>
+              <h2>{{ app.name }}</h2>
+            </div>
+            <div class="soil-admin-model-list">
+              {% for model in app.models %}
+                <div class="soil-admin-model">
+                  <a class="soil-admin-model-name" href="{{ model.admin_url }}">{{ model.name }}</a>
+                  <div class="soil-admin-model-actions">
+                    {% if model.add_url %}<a href="{{ model.add_url }}">Add</a>{% endif %}
+                    {% if model.admin_url %}<a href="{{ model.admin_url }}">Manage <span>→</span></a>{% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    {% else %}
+      <section class="soil-admin-empty">
+        <h2>No management sections available</h2>
+        <p>Your account does not currently have permission to manage any items.</p>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

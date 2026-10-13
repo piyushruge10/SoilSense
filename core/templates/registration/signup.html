@@ -1,0 +1,16 @@
+{% extends "registration/auth_base.html" %}
+{% block title %}Sign up{% endblock %}
+{% block auth_content %}
+  <p class="eyebrow">GET STARTED</p><h1 class="auth-title">Create your account</h1><p class="auth-subtitle">Join SoilSense to monitor and share your soil readings.</p>
+  <form method="post" class="settings-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="error-banner">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}
+      <div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}{{ field.errors }}</div>
+      {% endfor %}
+    </div>
+    <button class="button button-primary login-submit" type="submit">Create account</button>
+  </form>
+  <p class="account-switch">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}

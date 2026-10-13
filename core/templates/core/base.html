@@ -1,0 +1,53 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SoilSense{% endblock %} · SoilSense</title>
+  <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">S</span><span>SoilSense<small>GROW WITH CONFIDENCE</small></span></a>
+    <p class="nav-label">WORKSPACE</p>
+    <nav>
+      <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>◫</span> Overview</a>
+      <a class="{% if request.resolver_match.url_name == 'plants' %}active{% endif %}" href="{% url 'plants' %}"><span>❀</span> Plant library</a>
+      <a class="{% if request.resolver_match.url_name == 'live-share' %}active{% endif %}" href="{% url 'live-share' %}"><span>↗</span> Live sharing</a>
+      <a class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'settings' %}"><span>⚙</span> Settings</a>
+      {% if user.is_staff %}<a class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}" href="{% url 'admin-dashboard' %}"><span>▦</span> Admin center</a>{% endif %}
+    </nav>
+    <div class="sidebar-bottom"><span class="status-dot"></span> Local monitoring<br><small>Arduino soil station</small></div>
+  </aside>
+  <main class="main-content">
+    <header class="topbar"><span>Soil monitoring</span><div class="account-links"><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Toggle dark mode"><span aria-hidden="true">☾</span></button><details class="app-launcher"><summary aria-label="Open apps" title="Open apps"><span class="app-grid-icon" aria-hidden="true">{% for dot in "123456789" %}<i></i>{% endfor %}</span></summary><div class="app-menu"><a href="https://my-friends-katta.onrender.com/" target="_blank" rel="noopener noreferrer">My Friends Katta</a></div></details>{% if user.is_authenticated %}<span class="account-name">{{ user.username }}</span>{% else %}<a href="{% url 'login' %}">Log in</a><a class="account-signup" href="{% url 'signup' %}">Sign up</a>{% endif %}</div></header>
+    {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+    <footer class="site-footer">Made by Piyush Ruge</footer>
+  </main>
+  {% block scripts %}{% endblock %}
+  <script>
+  (() => {
+    const toggle = document.getElementById("theme-toggle");
+    if (!toggle) return;
+    const applyTheme = (dark) => {
+      document.body.classList.toggle("dark-theme", dark);
+      toggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+      toggle.firstElementChild.textContent = dark ? "☀" : "☾";
+    };
+    try {
+      applyTheme(localStorage.getItem("soilsense-theme") === "dark");
+      toggle.addEventListener("click", () => {
+        const dark = !document.body.classList.contains("dark-theme");
+        applyTheme(dark);
+        localStorage.setItem("soilsense-theme", dark ? "dark" : "light");
+      });
+    } catch (error) {
+      console.error("Unable to load or save the display theme.", error);
+    }
+  })();
+  </script>
+</body>
+</html>

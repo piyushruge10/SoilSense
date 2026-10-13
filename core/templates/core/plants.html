@@ -1,0 +1,89 @@
+{% extends "core/base.html" %}
+{% block title %}Plant library{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div><p class="eyebrow">GROWING / PLANT LIBRARY</p><h1>Find your plant's comfort zone</h1><p class="subtitle">Look up ideal soil and humidity conditions to help every plant thrive.</p></div>
+  <button class="button button-outline random-plant-button" id="random-plant" type="button">✦ Surprise me</button>
+</section>
+<form class="plant-filter-panel" method="get" id="plant-filters">
+  <div class="plant-filter-search"><label for="plant-search">Search the library</label><input id="plant-search" name="q" type="search" value="{{ query }}" placeholder="Search names, crops, or care tips"></div>
+  <div class="plant-filter-select"><label for="category-filter">Category</label><select name="category" id="category-filter"><option value="">All categories</option>{% for category in categories %}<option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>{% endfor %}</select></div>
+  <div class="plant-filter-select"><label for="sort-filter">Sort by</label><select name="sort" id="sort-filter"><option value="name" {% if sort == "name" %}selected{% endif %}>Name A–Z</option><option value="name-desc" {% if sort == "name-desc" %}selected{% endif %}>Name Z–A</option><option value="temperature" {% if sort == "temperature" %}selected{% endif %}>Cooler climate</option><option value="moisture" {% if sort == "moisture" %}selected{% endif %}>Lower moisture</option></select></div>
+  <label class="match-filter"><input type="checkbox" name="match" value="1" {% if match_soil %}checked{% endif %} {% if not has_reading %}disabled{% endif %}><span>Match my soil</span></label>
+  <button class="button button-primary" type="submit">Apply filters</button>
+  <a class="button button-outline reset-plants" href="{% url 'plants' %}">Reset</a>
+</form>
+<div class="plant-library-toolbar"><span><strong id="plant-count">{{ result_count }}</strong> plants found{% if match_soil and not has_reading %} · Connect a sensor to match your conditions{% endif %}</span><button class="favorite-filter" id="favorites-filter" type="button" aria-pressed="false">♡ Favorites only</button></div>
+<section class="plant-grid">
+{% for plant in plants %}
+  <article class="panel plant-card" data-plant-id="{{ plant.pk }}" data-plant-name="{{ plant.name }}"><div class="plant-heading"><span class="plant-icon">❀</span><div><h2>{{ plant.name }}</h2><span class="plant-category">{{ plant.category|default:"Garden plant" }}</span></div><button class="plant-favorite" type="button" aria-label="Add {{ plant.name }} to favorites" aria-pressed="false">♡</button></div>{% if plant.pk in matching_plant_ids %}<span class="plant-match-badge">✓ Matches your current conditions</span>{% endif %}<p class="plant-tips">{{ plant.care_tips }}</p><div class="care-ranges"><div><span>TEMPERATURE</span><strong>{{ plant.temperature_min|floatformat:0 }}–{{ plant.temperature_max|floatformat:0 }} °C</strong></div><div><span>HUMIDITY</span><strong>{{ plant.humidity_min|floatformat:0 }}–{{ plant.humidity_max|floatformat:0 }}%</strong></div><div><span>SOIL MOISTURE</span><strong>{{ plant.moisture_min|floatformat:0 }}–{{ plant.moisture_max|floatformat:0 }}%</strong></div></div></article>
+{% empty %}
+  <div class="panel no-plants">{% if query %}No plants matched “{{ query }}”. Try another search.{% else %}Your plant library is empty. Add plant care guides from the Django admin at <a href="/admin/">/admin/</a>.{% endif %}</div>
+{% endfor %}
+  <div class="panel no-favorites" id="no-favorites" hidden>No favorites saved yet. Tap the heart on a plant to keep it here.</div>
+</section>
+<div class="plant-toast" id="plant-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const cards = [...document.querySelectorAll(".plant-card")];
+  const favoritesButton = document.getElementById("favorites-filter");
+  const favoritesEmpty = document.getElementById("no-favorites");
+  const plantCount = document.getElementById("plant-count");
+  let showFavorites = false;
+  let favoriteIds = new Set();
+  try {
+    favoriteIds = new Set(JSON.parse(localStorage.getItem("soilsense-favorite-plants") || "[]"));
+  } catch (error) {
+    console.error("Unable to load saved plant favorites.", error);
+  }
+  function updateCards() {
+    let visibleCount = 0;
+    cards.forEach(card => {
+      const favorite = favoriteIds.has(card.dataset.plantId);
+      const button = card.querySelector(".plant-favorite");
+      button.classList.toggle("is-favorite", favorite);
+      button.textContent = favorite ? "♥" : "♡";
+      button.setAttribute("aria-pressed", String(favorite));
+      button.setAttribute("aria-label", `${favorite ? "Remove" : "Add"} ${card.dataset.plantName} ${favorite ? "from" : "to"} favorites`);
+      const visible = !showFavorites || favorite;
+      card.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+    plantCount.textContent = visibleCount;
+    favoritesEmpty.hidden = !showFavorites || visibleCount > 0;
+  }
+  cards.forEach(card => card.querySelector(".plant-favorite").addEventListener("click", () => {
+    const id = card.dataset.plantId;
+    if (favoriteIds.has(id)) favoriteIds.delete(id);
+    else favoriteIds.add(id);
+    try {
+      localStorage.setItem("soilsense-favorite-plants", JSON.stringify([...favoriteIds]));
+    } catch (error) {
+      console.error("Unable to save plant favorites.", error);
+    }
+    updateCards();
+  }));
+  favoritesButton.addEventListener("click", () => {
+    showFavorites = !showFavorites;
+    favoritesButton.setAttribute("aria-pressed", String(showFavorites));
+    favoritesButton.textContent = showFavorites ? "♥ Show all plants" : "♡ Favorites only";
+    updateCards();
+  });
+  document.getElementById("random-plant").addEventListener("click", () => {
+    const candidates = cards.filter(card => !card.hidden);
+    if (!candidates.length) {
+      document.getElementById("plant-toast").textContent = "No plants available with these filters.";
+      return;
+    }
+    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    selected.scrollIntoView({behavior: "smooth", block: "center"});
+    selected.classList.add("plant-highlight");
+    window.setTimeout(() => selected.classList.remove("plant-highlight"), 1800);
+    document.getElementById("plant-toast").textContent = `Try exploring ${selected.dataset.plantName}!`;
+  });
+  updateCards();
+})();
+</script>
+{% endblock %}

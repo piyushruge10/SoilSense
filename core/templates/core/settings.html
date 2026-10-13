@@ -1,0 +1,44 @@
+{% extends "core/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">WORKSPACE / SETTINGS</p><h1>Sensor settings</h1><p class="subtitle">Configure the serial connection and the care threshold sent to your Arduino.</p></div></section>
+<section class="panel settings-panel">
+  <div class="panel-heading"><div><h2>Arduino connection</h2><p>Use the port assigned to your Arduino UNO.</p></div><span class="connection {% if serial_status.connected %}online{% endif %}"><span class="status-dot"></span>{% if serial_status.connected %}Connected{% elif serial_status.port %}Connecting{% else %}Not connected{% endif %}</span></div>
+  {% if serial_status.error %}<div class="serial-error"><p>{{ serial_status.error }}</p><form method="post">{% csrf_token %}<button class="button button-secondary" type="submit" name="action" value="retry">Retry connection</button></form></div>{% endif %}
+  <form method="post" class="settings-form">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="error-banner">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+      <div class="field"><label for="{{ form.port.id_for_label }}">Serial port</label>{{ form.port }}<datalist id="serial-port-options">{% for port in available_ports %}<option value="{{ port.device }}">{{ port.description }}</option>{% endfor %}</datalist><small>{% if available_ports %}Detected: {% for port in available_ports %}{{ port.device }}{% if not forloop.last %}, {% endif %}{% endfor %}. Close serial monitors before connecting.{% else %}No serial devices detected. Connect the Arduino and check Device Manager for its COM number.{% endif %}</small>{{ form.port.errors }}</div>
+      <div class="field"><label for="{{ form.baud_rate.id_for_label }}">Baud rate</label>{{ form.baud_rate }}<small>Must match the Arduino sketch (default 9600).</small>{{ form.baud_rate.errors }}</div>
+      <div class="field"><label for="{{ form.moisture_threshold.id_for_label }}">Moisture threshold (%)</label>{{ form.moisture_threshold }}<small>Alert threshold sent to the board.</small>{{ form.moisture_threshold.errors }}</div>
+      <div class="field"><label for="{{ form.sample_interval.id_for_label }}">Sample interval (seconds)</label>{{ form.sample_interval }}<small>How often the board should report.</small>{{ form.sample_interval.errors }}</div>
+    </div>
+    <div class="protocol-note">The app accepts CSV readings (<code>temperature,humidity,moisture</code>) or JSON with those three fields, one reading per line. Settings are sent as <code>SET,threshold,interval</code>.</div>
+    <button class="button button-primary" type="submit">Save and send settings</button>
+  </form>
+</section>
+<section class="panel settings-panel hardware-panel">
+  <div class="panel-heading"><div><h2>Arduino UNO hardware connections</h2><p>Example wiring for a capacitive soil-moisture sensor, DHT22 air sensor, and DS18B20 soil-temperature probe.</p></div></div>
+  <div class="table-scroll">
+    <table class="wiring-table">
+      <thead><tr><th>Sensor</th><th>Sensor pin</th><th>Arduino UNO pin</th><th>Purpose / notes</th></tr></thead>
+      <tbody>
+        <tr><td>Capacitive moisture sensor</td><td>VCC</td><td>5V</td><td>Use the sensor's rated supply voltage.</td></tr>
+        <tr><td>Capacitive moisture sensor</td><td>GND</td><td>GND</td><td>Share ground with the other sensors.</td></tr>
+        <tr><td>Capacitive moisture sensor</td><td>AO / AOUT</td><td>A0</td><td>Analog moisture reading; calibrate dry and wet values in your sketch.</td></tr>
+        <tr><td>DHT22 humidity sensor</td><td>VCC / +</td><td>5V*</td><td>Reads air humidity and air temperature.</td></tr>
+        <tr><td>DHT22 humidity sensor</td><td>GND / -</td><td>GND</td><td>Place above soil; it measures air, not soil moisture.</td></tr>
+        <tr><td>DHT22 humidity sensor</td><td>DATA / OUT</td><td>D2</td><td>Bare sensors need a 4.7–10 kΩ pull-up from DATA to VCC; many modules include one.</td></tr>
+        <tr><td>DS18B20 temperature probe</td><td>VDD / red</td><td>5V</td><td>Probe for soil/root-zone temperature.</td></tr>
+        <tr><td>DS18B20 temperature probe</td><td>GND / black</td><td>GND</td><td>Wire colors may differ; confirm your probe's datasheet.</td></tr>
+        <tr><td>DS18B20 temperature probe</td><td>DATA / yellow</td><td>D3</td><td>Add a 4.7 kΩ pull-up resistor between DATA and 5V.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="protocol-note"><strong>Before powering up:</strong> connect all grounds, verify the pin labels and voltage rating printed on your modules, and never connect 5V to an Arduino input pin. Use either sensor setup that matches your sketch; the DHT22 reports air temperature, while the DS18B20 probe reports soil temperature. For a bare 4-pin DHT sensor, check its datasheet for pin order. Calibrate the moisture sensor's analog readings for your soil, then have the sketch send temperature, humidity, and moisture as one CSV or JSON line at the configured baud rate.</p>
+</section>
+<section class="panel settings-panel logout-panel">
+  <div class="panel-heading"><div><h2>Account</h2><p>Sign out of this SoilSense account on this device.</p></div></div>
+  <form method="post" action="{% url 'logout' %}" class="logout-form">{% csrf_token %}<button type="submit" class="button button-secondary">Log out</button></form>
+</section>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+{% block title %}Live sharing{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div><p class="eyebrow">GROWING / LIVE SHARING</p><h1>Community soil readings</h1><p class="subtitle">Publish your readings and explore live soil conditions shared by other growers.</p></div>
+</section>
+<section class="panel share-panel">
+  <div class="panel-heading"><div><h2>{% if is_published %}Your readings are published{% else %}Publish your readings{% endif %}</h2><p>{% if is_published %}Your live conditions are listed below for other signed-in growers.{% else %}Publishing adds your latest conditions to the community page.{% endif %}</p></div><span class="connection {% if is_published %}online{% endif %}"><span class="status-dot"></span>{% if is_published %}Public{% else %}Private{% endif %}</span></div>
+  <form method="post" action="{% url 'update-live-share' %}" class="share-actions">
+    {% csrf_token %}
+    {% if is_published %}
+      <button class="button button-secondary" type="submit" name="action" value="unpublish">Stop sharing my readings</button>
+      <label class="share-link-label" for="share-link">Your unique sharing link</label>
+      <div class="share-link-row"><input id="share-link" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'shared-soil' profile.token %}"><button class="button button-primary" id="copy-share-link" type="button">Copy link</button></div>
+    {% else %}
+      <button class="button button-primary" type="submit" name="action" value="publish">Publish my live readings</button>
+    {% endif %}
+  </form>
+</section>
+<section class="community-section">
+  <div class="community-heading"><div><p class="eyebrow">LIVE FROM THE COMMUNITY</p><h2>Published soil settings</h2></div><span class="community-count">{{ profiles|length }} {% if profiles|length == 1 %}grower{% else %}growers{% endif %}</span></div>
+  <div class="community-grid">
+    {% for item in profiles %}
+    <article class="panel community-card">
+      <div class="community-card-heading"><div class="grower-avatar">{{ item.profile.user.username|first|upper }}</div><div><h3>{{ item.profile.user.username }}</h3><span class="live-pill"><i></i> SHARING LIVE</span></div><a class="view-profile" href="{% url 'shared-soil' item.profile.token %}" aria-label="View {{ item.profile.user.username }}'s soil readings">↗</a></div>
+      <div class="community-metrics">
+        <div><span>TEMPERATURE</span><strong>{% if item.latest %}{{ item.latest.temperature|floatformat:1 }} °C{% else %}--{% endif %}</strong></div>
+        <div><span>HUMIDITY</span><strong>{% if item.latest %}{{ item.latest.humidity|floatformat:1 }}%{% else %}--{% endif %}</strong></div>
+        <div><span>MOISTURE</span><strong>{% if item.latest %}{{ item.latest.moisture|floatformat:1 }}%{% else %}--{% endif %}</strong></div>
+      </div>
+      <div class="community-card-footer"><span>{% if item.latest %}Updated {{ item.latest.recorded_at|date:"M j, H:i" }}{% else %}Waiting for first reading{% endif %}</span>{% if item.profile.user_id == request.user.id %}<span class="owner-label">YOUR STATION</span>{% endif %}</div>
+    </article>
+    {% empty %}
+    <div class="panel community-empty">No growers have published readings yet. Publish yours to be the first.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{% if is_published %}
+<script>
+(() => {
+  const copyButton = document.getElementById("copy-share-link");
+  copyButton.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById("share-link").value);
+      copyButton.textContent = "Copied";
+    } catch (error) {
+      console.error("Unable to copy the share link.", error);
+      document.getElementById("share-link").select();
+      copyButton.textContent = "Select and copy";
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}
