@@ -1,7 +1,8 @@
 import csv
 from datetime import timedelta
-
-from django.contrib import messages
+import json
+import uuid
+from django.views.decorators.csrf import csrf_exemptfrom django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
@@ -11,7 +12,7 @@ from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
-
+from .serial_monitor import SerialMonitor, available_serial_ports, serial_monitor_for    
 from .forms import SerialConfigurationForm
 from .models import PlantCare, SensorData, SerialConfiguration, SharedSoilSettings
 from .serial_monitor import available_serial_ports, serial_monitor_for
@@ -26,6 +27,9 @@ def _configuration(user):
             unassigned.user = user
             unassigned.save(update_fields=["user"])
             configuration = unassigned
+        if configuration.ingest_key is None:
+            configuration.ingest_key = uuid.uuid4()
+            configuration.save(update_fields=["ingest_key"])
     serial_monitor_for(user.pk).configure(
         configuration.port, configuration.baud_rate, user.pk
     )
@@ -244,6 +248,7 @@ def settings_page(request):
             "form": form,
             "serial_status": monitor.status(),
             "available_ports": available_serial_ports(),
+            "ingest_key": configuration.ingest_key
         },
     )
 
@@ -305,3 +310,27 @@ def _serialize_reading(reading):
         "moisture": reading.moisture,
         "recorded_at": reading.recorded_at.isoformat(),
     }
+
+
+@csrf_exempt
+@require_POST
+def ingest_api(request):
+    try:
+        key = uuid.UUID(request.headers.get("X-Api-Key", ""))
+    except ValueError:
+        return JsonResponse({"error": "invalid key"}, status=401)
+    configuration = SerialConfiguration.objects.filter(ingest_key=key).first()
+    if configuration is None or configuration.user_id is None:
+        return JsonResponse({"error": "invalid key"}, status=401)
+    try:
+        data = json.loads(request.body)
+        reading = SerialMonitor._parse_reading(json.dumps(data))
+    except (ValueError, TypeError):
+        reading = None
+    if reading is None:
+        return JsonResponse({"error": "invalid reading"}, status=400)
+    SensorData.objects.create(
+        user_id=configuration.user_id,
+        temperature=reading[0], humidity=reading[1], moisture=reading[2],
+    )
+    return JsonResponse({"ok": True}, status=201)
