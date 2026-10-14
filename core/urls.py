@@ -14,5 +14,6 @@ urlpatterns = [
     path("api/sensor-data/", views.sensor_data_api, name="sensor-data"),
     path("api/public-sensor-data/<uuid:token>/", views.public_sensor_data_api, name="public-sensor-data"),
     path("api/ingest/", views.ingest_api, name="ingest"),
+    path("api/browser-ingest/", views.browser_ingest_api, name="browser-ingest"),
 ]
 
