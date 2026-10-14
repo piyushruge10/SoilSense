@@ -37,6 +37,10 @@
   </div>
   <p class="protocol-note"><strong>Before powering up:</strong> connect all grounds, verify the pin labels and voltage rating printed on your modules, and never connect 5V to an Arduino input pin. Use either sensor setup that matches your sketch; the DHT22 reports air temperature, while the DS18B20 probe reports soil temperature. For a bare 4-pin DHT sensor, check its datasheet for pin order. Calibrate the moisture sensor's analog readings for your soil, then have the sketch send temperature, humidity, and moisture as one CSV or JSON line at the configured baud rate.</p>
 </section>
+<section class="panel settings-panel">
+  <div class="panel-heading"><div><h2>Cloud bridge key</h2><p>Used by bridge.py on your PC to send readings to this site.</p></div></div>
+  <div class="protocol-note"><code>{{ ingest_key }}</code></div>
+</section>
 <section class="panel settings-panel logout-panel">
   <div class="panel-heading"><div><h2>Account</h2><p>Sign out of this SoilSense account on this device.</p></div></div>
   <form method="post" action="{% url 'logout' %}" class="logout-form">{% csrf_token %}<button type="submit" class="button button-secondary">Log out</button></form>
