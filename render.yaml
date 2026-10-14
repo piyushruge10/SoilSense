@@ -1,0 +1,28 @@
+databases:
+  - name: soilsense-db
+    plan: free
+
+services:
+  - type: web
+    name: soilsense
+    runtime: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn soil_project.wsgi:application --workers 1 --threads 4"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: soilsense-db
+          property: connectionString
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: admin
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: you@example.com
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
