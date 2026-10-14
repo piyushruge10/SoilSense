@@ -2,8 +2,8 @@ import csv
 from datetime import timedelta
 import json
 import uuid
-from django.views.decorators.csrf import csrf_exemptfrom django.contrib 
-import messages
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
