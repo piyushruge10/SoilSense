@@ -56,6 +56,7 @@ class SerialConfiguration(models.Model):
         null=True,
         blank=True,
     )
+    ingest_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     port = models.CharField(max_length=100, blank=True, help_text="For example COM3")
     baud_rate = models.PositiveIntegerField(default=9600)
     moisture_threshold = models.PositiveSmallIntegerField(
