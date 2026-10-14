@@ -12,6 +12,7 @@ class LoginRequiredMiddleware:
             settings.LOGIN_URL,
             reverse("signup"),
             reverse("admin:login"),
+            reverse("ingest"),
         }
         self.static_url = settings.STATIC_URL
 
