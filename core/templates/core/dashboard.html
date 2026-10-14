@@ -197,4 +197,108 @@
   window.setInterval(updateFreshness, 1000);
 })();
 </script>
+<script>
+(() => {
+  const csrfToken = "{{ csrf_token }}";
+  const ingestUrl = "{% url 'browser-ingest' %}";
+  const button = document.getElementById("serial-connect");
+  const note = document.getElementById("serial-note");
+  if (!button) return;
+  if (!("serial" in navigator)) {
+    button.disabled = true;
+    note.textContent = "Use Chrome or Edge on a computer to connect an Arduino.";
+    return;
+  }
+
+  let busy = false;
+  let lastSettings = "";
+
+  function parseLine(line) {
+    try {
+      let t, h, m;
+      if (line.startsWith("{")) {
+        const v = JSON.parse(line);
+        [t, h, m] = [v.temperature, v.humidity, v.moisture].map(parseFloat);
+      } else {
+        const p = line.split(",").map(parseFloat);
+        if (p.length !== 3) return null;
+        [t, h, m] = p;
+      }
+      if (![t, h, m].every(Number.isFinite)) return null;
+      return {temperature: t, humidity: h, moisture: m};
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async function sendReading(reading) {
+    const response = await fetch(ingestUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
+      body: JSON.stringify(reading)
+    });
+    if (response.redirected) throw new Error("Session expired. Reload the page and sign in again.");
+    if (!response.ok) return null;
+    return (await response.json()).settings;
+  }
+
+  async function connect(selectedPort) {
+    if (busy) return;
+    let port;
+    try {
+      port = selectedPort || await navigator.serial.requestPort();
+      await port.open({baudRate: 9600});
+    } catch (error) {
+      note.textContent = error.name === "NotFoundError" ? "" : `Could not open the port: ${error.message}. Close other apps using it (e.g. Arduino IDE Serial Monitor).`;
+      return;
+    }
+    busy = true;
+    lastSettings = "";
+    button.textContent = "Disconnect Arduino";
+    note.textContent = "Reading from Arduino…";
+    const reader = port.readable.getReader();
+    const writer = port.writable.getWriter();
+    button.onclick = () => reader.cancel();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      while (true) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+        if (buffer.length > 4096) buffer = "";
+        let index;
+        while ((index = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, index).trim();
+          buffer = buffer.slice(index + 1);
+          const reading = line && parseLine(line);
+          if (!reading) continue;
+          const settings = await sendReading(reading);
+          note.textContent = "Sending live readings";
+          if (settings) {
+            const command = `SET,${settings.moisture_threshold},${settings.sample_interval}\n`;
+            if (command !== lastSettings) {
+              await writer.write(new TextEncoder().encode(command));
+              lastSettings = command;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      note.textContent = `Stopped: ${error.message}`;
+    } finally {
+      reader.releaseLock();
+      writer.releaseLock();
+      try { await port.close(); } catch (error) {}
+      busy = false;
+      button.textContent = "⚡ Connect Arduino (USB)";
+      button.onclick = () => connect();
+    }
+  }
+
+  button.onclick = () => connect();
+  navigator.serial.getPorts().then(ports => { if (ports.length === 1) connect(ports[0]); });
+})();
+</script>
 {% endblock %}
