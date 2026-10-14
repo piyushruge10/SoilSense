@@ -13,4 +13,6 @@ urlpatterns = [
     path("settings/", views.settings_page, name="settings"),
     path("api/sensor-data/", views.sensor_data_api, name="sensor-data"),
     path("api/public-sensor-data/<uuid:token>/", views.public_sensor_data_api, name="public-sensor-data"),
+    path("api/ingest/", views.ingest_api, name="ingest"),
 ]
+
