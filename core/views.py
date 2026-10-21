@@ -2,6 +2,7 @@ import csv
 from datetime import timedelta
 import json
 import uuid
+from .serial_monitor import SerialMonitor, available_serial_ports, serial_monitor_for
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
