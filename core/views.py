@@ -288,6 +288,9 @@ def sensor_data_api(request):
             )
         return response
 
+    readings = list(reading_query[:500])
+    readings.reverse()
+    latest = SensorData.objects.filter(user=request.user).first()
     status = serial_monitor_for(request.user.pk).status()
     fresh_window = timedelta(seconds=max(30, configuration.sample_interval * 3))
     receiving = latest is not None and timezone.now() - latest.recorded_at < fresh_window
