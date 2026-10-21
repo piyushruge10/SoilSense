@@ -288,20 +288,19 @@ def sensor_data_api(request):
             )
         return response
 
-    readings = list(reading_query[:500])
-    readings.reverse()
-    latest = SensorData.objects.filter(user=request.user).first()
+    status = serial_monitor_for(request.user.pk).status()
+    fresh_window = timedelta(seconds=max(30, configuration.sample_interval * 3))
+    receiving = latest is not None and timezone.now() - latest.recorded_at < fresh_window
     return JsonResponse(
         {
-            "connected": serial_monitor_for(request.user.pk).status()["connected"],
+            "connected": status["connected"] or receiving,
             "port": configuration.port,
-            "error": serial_monitor_for(request.user.pk).status()["error"],
+            "error": "" if (receiving or not configuration.port) else status["error"],
             "period": period,
             "latest": _serialize_reading(latest),
             "readings": [_serialize_reading(reading) for reading in readings],
         }
     )
-
 
 def _serialize_reading(reading):
     if reading is None:
