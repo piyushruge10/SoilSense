@@ -25,7 +25,7 @@
     <header class="topbar"><span>Soil monitoring</span><div class="account-links"><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Toggle dark mode"><span aria-hidden="true">☾</span></button><details class="app-launcher"><summary aria-label="Open apps" title="Open apps"><span class="app-grid-icon" aria-hidden="true">{% for dot in "123456789" %}<i></i>{% endfor %}</span></summary><div class="app-menu"><a href="https://my-friends-katta.onrender.com/" target="_blank" rel="noopener noreferrer">My Friends Katta</a></div></details>{% if user.is_authenticated %}<span class="account-name">{{ user.username }}</span>{% else %}<a href="{% url 'login' %}">Log in</a><a class="account-signup" href="{% url 'signup' %}">Sign up</a>{% endif %}</div></header>
     {% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
-    <footer class="site-footer">Made by Piyush Ruge</footer>
+    <footer class="site-footer">Made by Team Innovation Coder : Piyush Ruge</footer>
   </main>
   {% block scripts %}{% endblock %}
   <script>
