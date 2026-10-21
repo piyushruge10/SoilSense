@@ -367,34 +367,3 @@ def browser_ingest_api(request):
         },
         status=201,
     )
-
-@require_POST
-def browser_ingest_api(request):
-    try:
-        payload = json.loads(request.body)
-    except ValueError:
-        payload = None
-    reading = (
-        SerialMonitor._parse_reading(json.dumps(payload))
-        if isinstance(payload, dict)
-        else None
-    )
-    if reading is None:
-        return JsonResponse({"error": "invalid reading"}, status=400)
-    configuration, _ = SerialConfiguration.objects.get_or_create(user=request.user)
-    SensorData.objects.create(
-        user=request.user,
-        temperature=reading[0],
-        humidity=reading[1],
-        moisture=reading[2],
-    )
-    return JsonResponse(
-        {
-            "ok": True,
-            "settings": {
-                "moisture_threshold": configuration.moisture_threshold,
-                "sample_interval": configuration.sample_interval,
-            },
-        },
-        status=201,
-    )
