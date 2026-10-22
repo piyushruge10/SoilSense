@@ -13,6 +13,11 @@ class LoginRequiredMiddleware:
             reverse("signup"),
             reverse("admin:login"),
             reverse("ingest"),
+            # Offline support: must be reachable without a session so the
+            # browser can register the service worker and show the offline page.
+            reverse("service-worker"),
+            reverse("manifest"),
+            reverse("offline"),
         }
         self.static_url = settings.STATIC_URL
 
