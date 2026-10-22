@@ -15,5 +15,8 @@ urlpatterns = [
     path("api/public-sensor-data/<uuid:token>/", views.public_sensor_data_api, name="public-sensor-data"),
     path("api/ingest/", views.ingest_api, name="ingest"),
     path("api/browser-ingest/", views.browser_ingest_api, name="browser-ingest"),
+    path("sw.js", views.service_worker, name="service-worker"),
+    path("manifest.webmanifest", views.manifest, name="manifest"),
+    path("offline/", views.offline, name="offline"),
 ]
 
