@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline · SoilSense</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:"Segoe UI",Arial,sans-serif;background:#f7f8f5;color:#26352b;padding:24px}
+    .card{max-width:420px;background:#fff;border:1px solid #e7eae5;border-radius:12px;padding:30px;text-align:center;box-shadow:0 14px 45px rgba(39,63,45,.07)}
+    h1{font-size:22px;margin:0 0 10px} p{font-size:13px;color:#68756c;line-height:1.6}
+    a,button{display:inline-block;margin:6px 4px 0;padding:10px 16px;border-radius:7px;border:0;font:600 12px "Segoe UI",Arial,sans-serif;text-decoration:none;cursor:pointer}
+    button{background:#39764d;color:#fff} a{background:#edf4ee;color:#316944}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>You're offline</h1>
+    <p>This page needs an internet connection. Connect to the internet and try again.</p>
+    <p>These pages are available offline:</p>
+    <a href="{% url 'dashboard' %}">Readings</a>
+    <a href="{% url 'plants' %}">Plant library</a>
+    <a href="{% url 'settings' %}">Settings</a>
+    <p><button onclick="location.reload()">Try again</button></p>
+  </div>
+</body>
+</html>
