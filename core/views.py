@@ -369,3 +369,40 @@ def browser_ingest_api(request):
         },
         status=201,
     )
+
+from django.templatetags.static import static
+
+
+@require_GET
+def service_worker(request):
+    response = render(request, "core/sw.js", content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+@require_GET
+def manifest(request):
+    return JsonResponse(
+        {
+            "name": "SoilSense",
+            "short_name": "SoilSense",
+            "description": "Soil monitoring for healthier growing.",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#f7f8f5",
+            "theme_color": "#39764d",
+            "icons": [
+                {"src": static("core/icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
+                {"src": static("core/icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
+                {"src": static("core/icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+            ],
+        },
+        content_type="application/manifest+json",
+    )
+
+
+@require_GET
+def offline(request):
+    return render(request, "core/offline.html")
