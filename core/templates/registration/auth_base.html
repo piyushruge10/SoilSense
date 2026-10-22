@@ -15,5 +15,10 @@
     </section>
     <p class="auth-footer">Soil monitoring for healthier growing.</p>
   </main>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then(r => r.active && r.active.postMessage({type: "clear-caches"}));
+    }
+  </script>
 </body>
 </html>
