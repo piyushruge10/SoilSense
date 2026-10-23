@@ -1,7 +1,5 @@
 """Settings for the local soil monitoring application."""
 
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import os
 from pathlib import Path
