@@ -117,14 +117,17 @@
     }
   }
 
-  function sendSavedSettings() {
+  async function sendSavedSettings() {
     let command = null;
     try {
       command = localStorage.getItem(SETTINGS_KEY);
     } catch (error) {
       console.error("Unable to load Arduino settings from this device.", error);
     }
-    if (command) send(command);
+    if (command && !(await send(command))) {
+      message = "Couldn't send saved settings to the Arduino. Check the connection and try again.";
+      updateUI();
+    }
   }
 
   function applyServerSettings(settings) {
@@ -241,22 +244,60 @@
 
   document.querySelectorAll("form[data-send-settings]").forEach(form =>
     form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const submitButton = form.querySelector('[type="submit"]');
+      const status = form.querySelector("[data-settings-status]");
+      const showStatus = text => {
+        if (!status) return;
+        status.textContent = text;
+        status.hidden = false;
+      };
       const command = commandFor({
         moisture_threshold: form.elements.moisture_threshold.value,
         sample_interval: form.elements.sample_interval.value,
       });
-      remember(command);
-      if (!busy && navigator.onLine) return;
-      event.preventDefault();
-      const sent = await send(command, true);
-      if (navigator.onLine) {
-        form.submit();
-        return;
+      if (submitButton) submitButton.disabled = true;
+      try {
+        if (!navigator.onLine) {
+          remember(command);
+          const sent = busy && await send(command, true);
+          showStatus(sent
+            ? "Settings sent to the Arduino. You're offline, so they were not saved to your account."
+            : "Settings saved on this device only. No Arduino is connected, so they haven't been sent or saved to your account.");
+          return;
+        }
+
+        const response = await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: new FormData(form),
+          credentials: "same-origin",
+          headers: {"X-Requested-With": "XMLHttpRequest"},
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          const errors = result.errors || {};
+          const detail = Object.entries(errors)
+            .flatMap(([field, items]) => items.map(item => `${field}: ${item.message}`))
+            .join(" ");
+          showStatus(detail || "Settings could not be saved. Check the values and try again.");
+          return;
+        }
+
+        remember(command);
+        if (!busy) {
+          showStatus("Settings saved. Connect your Arduino to send them.");
+          return;
+        }
+        const sent = await send(command, true);
+        showStatus(sent
+          ? "Settings saved and sent to the Arduino UNO."
+          : "Settings were saved, but couldn't be sent to the Arduino. Check the connection and try again.");
+      } catch (error) {
+        console.error("Unable to save or send Arduino settings.", error);
+        showStatus("Settings could not be saved. Check your connection and try again.");
+      } finally {
+        if (submitButton) submitButton.disabled = false;
       }
-      message = sent
-        ? "Sent to the Arduino. You're offline, so save again once you're back online to keep it on your account."
-        : "You're offline and no Arduino is connected, so nothing was sent.";
-      updateUI();
     })
   );
 

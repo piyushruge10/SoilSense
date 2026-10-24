@@ -13,6 +13,7 @@
       <div class="field"><label for="{{ form.sample_interval.id_for_label }}">Sample interval (seconds)</label>{{ form.sample_interval }}<small>How often the board should report.</small>{{ form.sample_interval.errors }}</div>
     </div>
     <div class="protocol-note">One reading per line: CSV (<code>temperature,humidity,moisture</code>) or JSON. A sensor that isn't responding can be sent as <code>nan</code> or left empty (e.g. <code>,60,37</code>). Settings are sent to the board as <code>SET,threshold,interval</code>.</div>
+    <p class="protocol-note" data-settings-status role="status" aria-live="polite" hidden></p>
     <button class="button button-primary" type="submit">Save and send settings</button>
   </form>
 </section>

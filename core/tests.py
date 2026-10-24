@@ -294,6 +294,51 @@ class DashboardTests(TestCase):
         self.assertContains(page, "Arduino UNO hardware connections")
         self.assertContains(page, "Log out")
 
+    def test_settings_ajax_saves_configuration_and_returns_serial_values(self):
+        user = self._sign_in()
+
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "baud_rate": 19200,
+                "moisture_threshold": 42,
+                "sample_interval": 10,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "ok": True,
+                "settings": {
+                    "baud_rate": 19200,
+                    "moisture_threshold": 42,
+                    "sample_interval": 10,
+                },
+            },
+        )
+        configuration = SerialConfiguration.objects.get(user=user)
+        self.assertEqual(configuration.moisture_threshold, 42)
+        self.assertEqual(configuration.sample_interval, 10)
+
+    def test_settings_ajax_reports_invalid_values(self):
+        self._sign_in()
+
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "baud_rate": 9600,
+                "moisture_threshold": 101,
+                "sample_interval": 5,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("moisture_threshold", response.json()["errors"])
+
     def test_settings_logout_button_ends_session(self):
         self._sign_in()
 

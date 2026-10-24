@@ -216,9 +216,23 @@ def settings_page(request):
     if request.method == "POST":
         form = SerialConfigurationForm(request.POST, instance=configuration)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Settings saved. They are sent to your Arduino while it is connected.")
+            configuration = form.save()
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({
+                    "ok": True,
+                    "settings": {
+                        "baud_rate": configuration.baud_rate,
+                        "moisture_threshold": configuration.moisture_threshold,
+                        "sample_interval": configuration.sample_interval,
+                    },
+                })
+            messages.success(request, "Settings saved.")
             return redirect("settings")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"ok": False, "errors": form.errors.get_json_data()},
+                status=400,
+            )
     else:
         form = SerialConfigurationForm(instance=configuration)
     return render(request, "core/settings.html", {
