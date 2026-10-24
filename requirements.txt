@@ -1,5 +1,4 @@
 Django>=5.2,<7.0
-pyserial>=3.5,<4.0
 gunicorn>=22.0
 whitenoise>=6.7
 dj-database-url>=2.2

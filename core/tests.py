@@ -1,44 +1,30 @@
 import re
-from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from .models import PlantCare, SensorData, SerialConfiguration, SharedSoilSettings
-from .serial_monitor import SerialMonitor
+from .readings import parse_reading
 
 
-class SerialReadingTests(TestCase):
-    def test_serial_port_errors_include_specific_recovery_steps(self):
-        permission_error = SerialMonitor._friendly_error("COM3", PermissionError(13, "Access is denied"))
-        missing_port_error = SerialMonitor._friendly_error(
-            "COM3", FileNotFoundError(2, "The system cannot find the file specified")
-        )
-
-        self.assertIn("Close Arduino IDE Serial Monitor/Plotter", permission_error)
-        self.assertIn("Retry connection", permission_error)
-        self.assertIn("Windows Device Manager", missing_port_error)
-        self.assertIn("COM3 was not found", missing_port_error)
-        wrapped_error = SerialMonitor._friendly_error(
-            "COM3",
-            "could not open port 'COM3': PermissionError(13, 'Access is denied.')",
-        )
-        self.assertIn("Close Arduino IDE Serial Monitor/Plotter", wrapped_error)
-
+class ReadingParsingTests(TestCase):
     def test_parses_csv_and_json_readings(self):
-        self.assertEqual(SerialMonitor._parse_reading("21.5,60,37"), (21.5, 60.0, 37.0))
+        self.assertEqual(parse_reading("21.5,60,37"), (21.5, 60.0, 37.0))
         self.assertEqual(
-            SerialMonitor._parse_reading(
-                '{"temperature":21.5,"humidity":60,"moisture":37}'
-            ),
+            parse_reading('{"temperature":21.5,"humidity":60,"moisture":37}'),
             (21.5, 60.0, 37.0),
         )
 
-    def test_rejects_malformed_and_out_of_range_readings(self):
-        self.assertIsNone(SerialMonitor._parse_reading("not sensor data"))
-        self.assertIsNone(SerialMonitor._parse_reading("21.5,101,37"))
-        self.assertIsNone(SerialMonitor._parse_reading("NaN,60,37"))
+    def test_unresponsive_sensor_is_reported_as_missing(self):
+        self.assertEqual(parse_reading("nan,60,37"), (None, 60.0, 37.0))
+        self.assertEqual(parse_reading("21.5,101,37"), (21.5, None, 37.0))
+        self.assertEqual(parse_reading("21.5,60,"), (21.5, 60.0, None))
+        self.assertEqual(parse_reading("-127,60,37"), (None, 60.0, 37.0))
+
+    def test_rejects_malformed_or_fully_empty_readings(self):
+        self.assertIsNone(parse_reading("not sensor data"))
+        self.assertIsNone(parse_reading("nan,nan,nan"))
 
 
 class DashboardTests(TestCase):
@@ -135,6 +121,16 @@ class DashboardTests(TestCase):
         self.assertContains(response, "37.0%")
         self.assertNotContains(response, "30.0")
 
+    def test_dashboard_marks_a_missing_sensor(self):
+        user = self._sign_in()
+        SensorData.objects.create(user=user, temperature=None, humidity=60, moisture=37)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "No sensor readings found")
+        self.assertContains(response, "60.0")
+        self.assertContains(response, "37.0")
+
     def test_plant_search_filters_guides(self):
         self._sign_in()
         PlantCare.objects.create(
@@ -206,6 +202,20 @@ class DashboardTests(TestCase):
         self.assertEqual(response.json()["latest"]["moisture"], 37)
         self.assertEqual(len(response.json()["readings"]), 1)
 
+    def test_browser_ingest_accepts_offline_batch_with_original_timestamps(self):
+        user = self._sign_in()
+        response = self.client.post(
+            reverse("browser-ingest"),
+            data={"readings": [
+                {"recorded_at": "2026-10-24T08:00:00Z", "temperature": None, "humidity": 55, "moisture": 40},
+                {"recorded_at": "2026-10-24T08:00:05Z", "temperature": 21, "humidity": 55, "moisture": 41},
+            ]},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(SensorData.objects.filter(user=user).count(), 2)
+
     def test_sensor_api_exports_only_the_users_csv_readings(self):
         other = get_user_model().objects.create_user(
             username="another-grower", password="test-password"
@@ -272,7 +282,6 @@ class DashboardTests(TestCase):
         response = self.client.post(
             reverse("settings"),
             {
-                "port": "",
                 "baud_rate": 9600,
                 "moisture_threshold": 35,
                 "sample_interval": 5,
@@ -281,7 +290,7 @@ class DashboardTests(TestCase):
 
         self.assertRedirects(response, reverse("settings"))
         page = self.client.get(reverse("settings"))
-        self.assertContains(page, "Serial port")
+        self.assertContains(page, "Arduino connection")
         self.assertContains(page, "Arduino UNO hardware connections")
         self.assertContains(page, "Log out")
 
@@ -295,20 +304,6 @@ class DashboardTests(TestCase):
             self.client.get(reverse("settings")),
             f"{reverse('login')}?next={reverse('settings')}",
         )
-
-    @patch("core.views.serial_monitor_for")
-    def test_settings_retry_reopens_the_saved_port(self, get_monitor):
-        user = self._sign_in()
-        SerialConfiguration.objects.create(user=user, port="COM3")
-        monitor = Mock()
-        get_monitor.return_value = monitor
-
-        response = self.client.post(
-            reverse("settings"), {"action": "retry"}
-        )
-
-        self.assertRedirects(response, reverse("settings"))
-        monitor.reconnect.assert_called_once_with()
 
     def test_sharing_page_and_sensor_routes_require_login(self):
         owner = get_user_model().objects.create_user(

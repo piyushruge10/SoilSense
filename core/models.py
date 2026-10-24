@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 class SensorData(models.Model):
@@ -13,12 +14,12 @@ class SensorData(models.Model):
         null=True,
         blank=True,
     )
-    temperature = models.FloatField()
-    humidity = models.FloatField()
+    temperature = models.FloatField(null=True, blank=True)
+    humidity = models.FloatField(null=True, blank=True)
     moisture = models.FloatField(
-        validators=[MinValueValidator(0), MaxValueValidator(100)]
+        null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
-    recorded_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    recorded_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
 
     class Meta:
         ordering = ["-recorded_at"]
@@ -26,7 +27,8 @@ class SensorData(models.Model):
         verbose_name_plural = "sensor readings"
 
     def __str__(self):
-        return f"{self.recorded_at:%Y-%m-%d %H:%M:%S} — {self.moisture:.0f}% moisture"
+        moisture = "--" if self.moisture is None else f"{self.moisture:.0f}%"
+        return f"{self.recorded_at:%Y-%m-%d %H:%M:%S} — {moisture} moisture"
 
 
 class PlantCare(models.Model):

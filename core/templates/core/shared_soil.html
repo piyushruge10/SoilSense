@@ -3,9 +3,9 @@
 {% block content %}
 <section class="page-heading"><div><p class="eyebrow">COMMUNITY / LIVE READINGS</p><h1>{{ profile.user.username }}'s soil conditions</h1><p class="subtitle">Live sensor readings shared by this grower.</p></div><span class="live-pill"><i></i> LIVE</span></section>
 <section class="metric-grid share-metrics">
-  <article class="metric-card"><div class="metric-top"><span>SOIL TEMPERATURE</span><span class="metric-icon warm">°</span></div><div class="metric-value"><span id="temperature">{% if latest %}{{ latest.temperature|floatformat:1 }}{% else %}--{% endif %}</span><small>°C</small></div><p>Root zone temperature</p></article>
-  <article class="metric-card"><div class="metric-top"><span>AIR HUMIDITY</span><span class="metric-icon blue">≈</span></div><div class="metric-value"><span id="humidity">{% if latest %}{{ latest.humidity|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p>Relative humidity</p></article>
-  <article class="metric-card"><div class="metric-top"><span>SOIL MOISTURE</span><span class="metric-icon green">◉</span></div><div class="metric-value"><span id="moisture">{% if latest %}{{ latest.moisture|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p>Volumetric moisture</p></article>
+  <article class="metric-card"><div class="metric-top"><span>SOIL TEMPERATURE</span><span class="metric-icon warm">°</span></div><div class="metric-value"><span id="temperature">{% if latest and latest.temperature is None %}No sensor readings found{% elif latest %}{{ latest.temperature|floatformat:1 }}{% else %}--{% endif %}</span><small>°C</small></div><p>Root zone temperature</p></article>
+  <article class="metric-card"><div class="metric-top"><span>AIR HUMIDITY</span><span class="metric-icon blue">≈</span></div><div class="metric-value"><span id="humidity">{% if latest and latest.humidity is None %}No sensor readings found{% elif latest %}{{ latest.humidity|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p>Relative humidity</p></article>
+  <article class="metric-card"><div class="metric-top"><span>SOIL MOISTURE</span><span class="metric-icon green">◉</span></div><div class="metric-value"><span id="moisture">{% if latest and latest.moisture is None %}No sensor readings found{% elif latest %}{{ latest.moisture|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p>Volumetric moisture</p></article>
 </section>
 <section class="panel public-update"><span class="live-pill"><i></i> LIVE</span><span>Last sensor update: <strong id="updated-at">{% if latest %}{{ latest.recorded_at|date:"M j, Y H:i:s" }}{% else %}Waiting for the first sensor reading{% endif %}</strong></span></section>
 {% endblock %}
@@ -23,9 +23,14 @@
       if (!response.ok) throw new Error(`Sensor request failed (${response.status})`);
       const data = await response.json();
       if (!data.latest) return;
-      document.getElementById("temperature").textContent = Number(data.latest.temperature).toFixed(1);
-      document.getElementById("humidity").textContent = Number(data.latest.humidity).toFixed(1);
-      document.getElementById("moisture").textContent = Number(data.latest.moisture).toFixed(1);
+      const show = (id, value) => {
+        document.getElementById(id).textContent = (value === null || value === undefined)
+          ? "No sensor readings found"
+          : Number(value).toFixed(1);
+      };
+      show("temperature", data.latest.temperature);
+      show("humidity", data.latest.humidity);
+      show("moisture", data.latest.moisture);
       document.getElementById("updated-at").textContent = new Date(data.latest.recorded_at).toLocaleString();
     } catch (error) {
       console.error("Unable to refresh shared soil readings.", error);

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="{% static 'core/styles.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body data-ingest-url="{% url 'browser-ingest' %}" data-csrf="{{ csrf_token }}" data-baud="{{ request.user.serial_configuration.baud_rate|default:9600 }}">
   <aside class="sidebar">
     <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">S</span><span>SoilSense<small>GROW WITH CONFIDENCE</small></span></a>
     <p class="nav-label">WORKSPACE</p>
@@ -31,6 +31,7 @@
     <footer class="site-footer">Made by Team Innovation Coder : Piyush Ruge</footer>
     <div class="offline-banner" id="offline-banner" role="status" hidden>You're offline. Showing saved data.</div>
   </main>
+  {% if user.is_authenticated %}<script src="{% static 'core/serial.js' %}"></script>{% endif %}
   {% block scripts %}{% endblock %}
   <script>
   (() => {

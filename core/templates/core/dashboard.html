@@ -3,15 +3,15 @@
 {% block content %}
 <section class="page-heading dashboard-heading">
   <div><p class="eyebrow">MONITORING / OVERVIEW</p><h1>Your soil, at a glance</h1><p class="subtitle">A healthier garden starts with knowing what's happening below the surface.</p></div>
-  <div class="dashboard-status"><div id="connection" class="connection {% if serial_status.connected %}online{% endif %}"><span class="status-dot"></span><span>{% if serial_status.connected %}Arduino connected{% elif serial_status.port %}Connecting to {{ serial_status.port }}{% else %}No sensor connected{% endif %}</span></div><a class="text-link" href="{% url 'settings' %}">Connection settings →</a>
-  <button class="button button-outline" id="serial-connect" type="button">⚡ Connect Arduino (USB)</button>
-  <small id="serial-note" class="text-link"></small>
+  <div class="dashboard-status"><div id="connection" class="connection"><span class="status-dot"></span><span>No sensor connected</span></div><a class="text-link" href="{% url 'settings' %}">Sensor settings →</a>
+  <button class="button button-outline" type="button" data-serial-connect>⚡ Connect Arduino (USB)</button>
+  <small class="text-link" data-serial-note></small>
   </div>
 </section>
 <section class="metric-grid" aria-label="Latest sensor readings">
-  <article class="metric-card"><div class="metric-top"><span>SOIL TEMPERATURE</span><span class="metric-icon warm">°</span></div><div class="metric-value"><span id="temperature">{{ latest.temperature|default:"--" }}</span><small>°C</small></div><p>Root zone temperature</p></article>
-  <article class="metric-card"><div class="metric-top"><span>AIR HUMIDITY</span><span class="metric-icon blue">≈</span></div><div class="metric-value"><span id="humidity">{{ latest.humidity|default:"--" }}</span><small>%</small></div><p>Relative humidity</p></article>
-  <article class="metric-card moisture-metric"><div class="metric-top"><span>SOIL MOISTURE</span><span class="metric-icon green">◉</span></div><div class="metric-value"><span id="moisture">{{ latest.moisture|default:"--" }}</span><small>%</small></div><p id="moisture-advice">Volumetric moisture</p></article>
+  <article id="card-temperature" class="metric-card {% if latest and latest.temperature is None %}no-data{% endif %}"><div class="metric-top"><span>SOIL TEMPERATURE</span><span class="metric-icon warm">°</span></div><div class="metric-value"><span id="temperature">{% if latest and latest.temperature is None %}No sensor readings found{% elif latest %}{{ latest.temperature|floatformat:1 }}{% else %}--{% endif %}</span><small>°C</small></div><p>Root zone temperature</p></article>
+  <article id="card-humidity" class="metric-card {% if latest and latest.humidity is None %}no-data{% endif %}"><div class="metric-top"><span>AIR HUMIDITY</span><span class="metric-icon blue">≈</span></div><div class="metric-value"><span id="humidity">{% if latest and latest.humidity is None %}No sensor readings found{% elif latest %}{{ latest.humidity|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p>Relative humidity</p></article>
+  <article id="card-moisture" class="metric-card moisture-metric {% if latest and latest.moisture is None %}no-data{% endif %}"><div class="metric-top"><span>SOIL MOISTURE</span><span class="metric-icon green">◉</span></div><div class="metric-value"><span id="moisture">{% if latest and latest.moisture is None %}No sensor readings found{% elif latest %}{{ latest.moisture|floatformat:1 }}{% else %}--{% endif %}</span><small>%</small></div><p id="moisture-advice">Volumetric moisture</p></article>
 </section>
 <section class="panel chart-panel">
   <div class="panel-heading chart-toolbar">
@@ -30,7 +30,7 @@
   <div class="chart-footer"><span id="freshness">Waiting for sensor data</span><span id="trend-delta">No trend yet</span></div>
 </section>
 <section class="panel reading-panel"><div class="panel-heading"><div><h2>Latest readings</h2><p>Most recent sensor updates in the selected period</p></div><span class="reading-count" id="reading-count">0 readings</span></div><div class="table-scroll"><table><thead><tr><th>TIME</th><th>TEMPERATURE</th><th>HUMIDITY</th><th>MOISTURE</th></tr></thead><tbody id="reading-rows">
-{% for reading in readings reversed %}<tr><td>{{ reading.recorded_at|date:"M j, H:i:s" }}</td><td>{{ reading.temperature|floatformat:1 }} °C</td><td>{{ reading.humidity|floatformat:1 }}%</td><td><span class="moisture-tag">{{ reading.moisture|floatformat:1 }}%</span></td></tr>{% empty %}<tr class="empty-row"><td colspan="4">No sensor readings yet. Connect your Arduino to get started.</td></tr>{% endfor %}
+{% for reading in readings reversed %}<tr><td>{{ reading.recorded_at|date:"M j, H:i:s" }}</td><td>{% if reading.temperature is None %}—{% else %}{{ reading.temperature|floatformat:1 }} °C{% endif %}</td><td>{% if reading.humidity is None %}—{% else %}{{ reading.humidity|floatformat:1 }}%{% endif %}</td><td>{% if reading.moisture is None %}—{% else %}<span class="moisture-tag">{{ reading.moisture|floatformat:1 }}%</span>{% endif %}</td></tr>{% empty %}<tr class="empty-row"><td colspan="4">No sensor readings yet. Connect your Arduino to get started.</td></tr>{% endfor %}
 </tbody></table></div></section>
 {% endblock %}
 {% block scripts %}
@@ -50,6 +50,42 @@
   let paused = false;
   let refreshing = false;
   let lastUpdated = null;
+  const has = value => value !== null && value !== undefined;
+  const series = () => readings.filter(reading => has(reading[selectedMetric]));
+  const serialConnected = () => Boolean(window.SoilSerial && window.SoilSerial.isConnected());
+
+  function setPill(online, text, title) {
+    const status = document.getElementById("connection");
+    status.classList.toggle("online", online);
+    status.classList.toggle("connection-error", Boolean(title) && !online);
+    status.lastElementChild.textContent = text;
+    status.title = title || "";
+  }
+
+  function setMetric(key, value) {
+    const missing = !has(value);
+    document.getElementById(`card-${key}`).classList.toggle("no-data", missing);
+    document.getElementById(key).textContent = missing ? "No sensor readings found" : Number(value).toFixed(1);
+  }
+
+  function renderLatest(latest) {
+    lastUpdated = latest ? new Date(latest.recorded_at) : null;
+    const advice = document.getElementById("moisture-advice");
+    if (!latest) {
+      ["temperature", "humidity", "moisture"].forEach(key => {
+        document.getElementById(`card-${key}`).classList.remove("no-data");
+        document.getElementById(key).textContent = "--";
+      });
+      advice.textContent = "Volumetric moisture";
+      return;
+    }
+    ["temperature", "humidity", "moisture"].forEach(key => setMetric(key, latest[key]));
+    const moisture = latest.moisture;
+    advice.textContent = !has(moisture) ? "Check the moisture sensor wiring" :
+      moisture < 20 ? "Very dry · check soil and water needs" :
+      moisture < 35 ? "On the dry side · monitor closely" :
+      moisture > 80 ? "Very wet · check drainage" : "Moisture is in a moderate range";
+  }
 
   function drawChart() {
     const ratio = window.devicePixelRatio || 1;
@@ -59,8 +95,9 @@
     canvas.height = height * ratio;
     context.scale(ratio, ratio);
     context.clearRect(0, 0, width, height);
-    if (!readings.length) return;
-    const values = readings.map(reading => Number(reading[selectedMetric]));
+    const data = series();
+    if (!data.length) return;
+    const values = data.map(reading => Number(reading[selectedMetric]));
     const dataMin = Math.min(...values);
     const dataMax = Math.max(...values);
     const padding = (dataMax - dataMin) * .15 || (selectedMetric === "temperature" ? 2 : 5);
@@ -94,12 +131,13 @@
   function updateSummary() {
     const summary = document.getElementById("trend-summary");
     const delta = document.getElementById("trend-delta");
-    if (!readings.length) {
-      summary.innerHTML = "<span>No readings available for this time range.</span>";
+    const data = series();
+    if (!data.length) {
+      summary.innerHTML = `<span>${readings.length ? "No sensor readings found" : "No readings available for this time range."}</span>`;
       delta.textContent = "No trend yet";
       return;
     }
-    const values = readings.map(reading => Number(reading[selectedMetric]));
+    const values = data.map(reading => Number(reading[selectedMetric]));
     const average = values.reduce((sum, value) => sum + value, 0) / values.length;
     const unit = metrics[selectedMetric].unit;
     summary.innerHTML = `<span>LOW <strong>${Math.min(...values).toFixed(1)}${unit}</strong></span><span>AVERAGE <strong>${average.toFixed(1)}${unit}</strong></span><span>HIGH <strong>${Math.max(...values).toFixed(1)}${unit}</strong></span>`;
@@ -117,10 +155,24 @@
   function updateRows() {
     const rows = document.getElementById("reading-rows");
     const recent = readings.slice(-8).reverse();
+    const fmt = (value, unit) => has(value) ? `${Number(value).toFixed(1)}${unit}` : "—";
     rows.innerHTML = recent.length ? recent.map(reading =>
-      `<tr><td>${new Date(reading.recorded_at).toLocaleString()}</td><td>${Number(reading.temperature).toFixed(1)} °C</td><td>${Number(reading.humidity).toFixed(1)}%</td><td><span class="moisture-tag">${Number(reading.moisture).toFixed(1)}%</span></td></tr>`
+      `<tr><td>${new Date(reading.recorded_at).toLocaleString()}</td><td>${fmt(reading.temperature, " °C")}</td><td>${fmt(reading.humidity, "%")}</td><td>${has(reading.moisture) ? `<span class="moisture-tag">${Number(reading.moisture).toFixed(1)}%</span>` : "—"}</td></tr>`
     ).join("") : '<tr class="empty-row"><td colspan="4">No readings in this period. Try a longer range or connect your Arduino.</td></tr>';
     document.getElementById("reading-count").textContent = `${readings.length} ${readings.length === 1 ? "reading" : "readings"}`;
+  }
+
+  function updateChartEmpty() {
+    const empty = document.getElementById("chart-empty");
+    if (!readings.length) {
+      empty.textContent = "Readings will appear here when your Arduino is connected.";
+      empty.hidden = false;
+    } else if (!series().length) {
+      empty.textContent = "No sensor readings found";
+      empty.hidden = false;
+    } else {
+      empty.hidden = true;
+    }
   }
 
   function updateFreshness() {
@@ -135,51 +187,64 @@
     label.classList.toggle("freshness-stale", seconds > 30);
   }
 
+  function render(latest) {
+    renderLatest(latest);
+    document.getElementById("chart-caption").textContent = `Temperature, humidity, and moisture · ${periodSelect.options[periodSelect.selectedIndex].text}`;
+    document.getElementById("range-start").textContent = readings.length ? new Date(readings[0].recorded_at).toLocaleString() : "No readings";
+    document.getElementById("range-end").textContent = readings.length ? new Date(readings[readings.length - 1].recorded_at).toLocaleString() : "—";
+    drawChart();
+    updateChartEmpty();
+    updateSummary();
+    updateRows();
+    updateFreshness();
+  }
+
   async function refresh() {
     if (paused || refreshing) return;
     refreshing = true;
-    const period = periodSelect.value;
     try {
-      const response = await fetch(`${endpoint}?period=${encodeURIComponent(period)}`, {headers: {"Accept": "application/json"}});
+      const response = await fetch(`${endpoint}?period=${encodeURIComponent(periodSelect.value)}`, {headers: {"Accept": "application/json"}});
       if (!response.ok) throw new Error(`Sensor request failed (${response.status})`);
       const data = await response.json();
       readings = data.readings;
-      lastUpdated = data.latest ? new Date(data.latest.recorded_at) : null;
-      const status = document.getElementById("connection");
-      status.classList.toggle("online", data.connected);
-      status.classList.toggle("connection-error", Boolean(data.error));
-      status.lastElementChild.textContent = data.connected ? "Arduino connected" : data.error ? "Connection issue" : data.port ? `Connecting to ${data.port}` : "No sensor connected";
-      status.title = data.error || (data.connected ? "Receiving sensor data" : "Open settings to configure a sensor");
-      if (data.latest) {
-        document.getElementById("temperature").textContent = Number(data.latest.temperature).toFixed(1);
-        document.getElementById("humidity").textContent = Number(data.latest.humidity).toFixed(1);
-        document.getElementById("moisture").textContent = Number(data.latest.moisture).toFixed(1);
-        const moisture = Number(data.latest.moisture);
-        document.getElementById("moisture-advice").textContent = moisture < 20 ? "Very dry · check soil and water needs" : moisture < 35 ? "On the dry side · monitor closely" : moisture > 80 ? "Very wet · check drainage" : "Moisture is in a moderate range";
-      } else {
-        ["temperature", "humidity", "moisture"].forEach(id => document.getElementById(id).textContent = "--");
-        document.getElementById("moisture-advice").textContent = "Volumetric moisture";
+      const lastServer = readings.length ? new Date(readings[readings.length - 1].recorded_at).getTime() : 0;
+      const local = (window.SoilSerial ? window.SoilSerial.pending() : [])
+        .filter(reading => new Date(reading.recorded_at).getTime() > lastServer);
+      readings = readings.concat(local);
+      if (!serialConnected()) {
+        setPill(data.connected && !data.error, data.error ? "Offline" : data.connected ? "Receiving readings" : "No sensor connected", data.error);
       }
-      document.getElementById("chart-empty").hidden = readings.length > 0;
-      document.getElementById("chart-caption").textContent = `Temperature, humidity, and moisture · ${periodSelect.options[periodSelect.selectedIndex].text}`;
-      document.getElementById("range-start").textContent = readings.length ? new Date(readings[0].recorded_at).toLocaleString() : "No readings";
-      document.getElementById("range-end").textContent = readings.length ? new Date(readings[readings.length - 1].recorded_at).toLocaleString() : "—";
-      drawChart();
-      updateSummary();
-      updateRows();
-      updateFreshness();
+      render(local.length ? local[local.length - 1] : data.latest);
     } catch (error) {
       console.error("Unable to refresh sensor readings.", error);
-      document.getElementById("freshness").textContent = "Refresh failed · check connection";
+      if (!readings.length && window.SoilSerial) {
+        readings = window.SoilSerial.pending().slice(-500);
+        if (readings.length) render(readings[readings.length - 1]);
+      }
+      document.getElementById("freshness").textContent = serialConnected()
+        ? "Offline · showing live readings from your Arduino"
+        : "Refresh failed · check connection";
     } finally {
       refreshing = false;
     }
   }
 
+  window.addEventListener("soil:reading", event => {
+    if (paused) return;
+    readings.push(event.detail);
+    if (readings.length > 500) readings.shift();
+    render(event.detail);
+  });
+  window.addEventListener("soil:status", event => {
+    if (event.detail.connected) setPill(true, event.detail.text, "Receiving sensor data");
+    else if (!refreshing) setPill(false, event.detail.text, "");
+  });
+
   document.querySelectorAll(".metric-tab").forEach(button => button.addEventListener("click", () => {
     selectedMetric = button.dataset.metric;
     document.querySelectorAll(".metric-tab").forEach(tab => tab.classList.toggle("active", tab === button));
     drawChart();
+    updateChartEmpty();
     updateSummary();
   }));
   periodSelect.addEventListener("change", () => {
@@ -197,110 +262,6 @@
   refresh();
   window.setInterval(refresh, 5000);
   window.setInterval(updateFreshness, 1000);
-})();
-</script>
-<script>
-(() => {
-  const csrfToken = "{{ csrf_token }}";
-  const ingestUrl = "{% url 'browser-ingest' %}";
-  const button = document.getElementById("serial-connect");
-  const note = document.getElementById("serial-note");
-  if (!button) return;
-  if (!("serial" in navigator)) {
-    button.disabled = true;
-    note.textContent = "Use Chrome or Edge on a computer to connect an Arduino.";
-    return;
-  }
-
-  let busy = false;
-  let lastSettings = "";
-
-  function parseLine(line) {
-    try {
-      let t, h, m;
-      if (line.startsWith("{")) {
-        const v = JSON.parse(line);
-        [t, h, m] = [v.temperature, v.humidity, v.moisture].map(parseFloat);
-      } else {
-        const p = line.split(",").map(parseFloat);
-        if (p.length !== 3) return null;
-        [t, h, m] = p;
-      }
-      if (![t, h, m].every(Number.isFinite)) return null;
-      return {temperature: t, humidity: h, moisture: m};
-    } catch (error) {
-      return null;
-    }
-  }
-
-  async function sendReading(reading) {
-    const response = await fetch(ingestUrl, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
-      body: JSON.stringify(reading)
-    });
-    if (response.redirected) throw new Error("Session expired. Reload the page and sign in again.");
-    if (!response.ok) return null;
-    return (await response.json()).settings;
-  }
-
-  async function connect(selectedPort) {
-    if (busy) return;
-    let port;
-    try {
-      port = selectedPort || await navigator.serial.requestPort();
-      await port.open({baudRate: 9600});
-    } catch (error) {
-      note.textContent = error.name === "NotFoundError" ? "" : `Could not open the port: ${error.message}. Close other apps using it (e.g. Arduino IDE Serial Monitor).`;
-      return;
-    }
-    busy = true;
-    lastSettings = "";
-    button.textContent = "Disconnect Arduino";
-    note.textContent = "Reading from Arduino…";
-    const reader = port.readable.getReader();
-    const writer = port.writable.getWriter();
-    button.onclick = () => reader.cancel();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    try {
-      while (true) {
-        const {value, done} = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, {stream: true});
-        if (buffer.length > 4096) buffer = "";
-        let index;
-        while ((index = buffer.indexOf("\n")) >= 0) {
-          const line = buffer.slice(0, index).trim();
-          buffer = buffer.slice(index + 1);
-          const reading = line && parseLine(line);
-          if (!reading) continue;
-          const settings = await sendReading(reading);
-          note.textContent = "Sending live readings";
-          if (settings) {
-            const command = `SET,${settings.moisture_threshold},${settings.sample_interval}\n`;
-            if (command !== lastSettings) {
-              await writer.write(new TextEncoder().encode(command));
-              lastSettings = command;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      note.textContent = `Stopped: ${error.message}`;
-    } finally {
-      reader.releaseLock();
-      writer.releaseLock();
-      try { await port.close(); } catch (error) {}
-      busy = false;
-      button.textContent = "⚡ Connect Arduino (USB)";
-      button.onclick = () => connect();
-    }
-  }
-
-  button.onclick = () => connect();
-  navigator.serial.getPorts().then(ports => { if (ports.length === 1) connect(ports[0]); });
 })();
 </script>
 {% endblock %}

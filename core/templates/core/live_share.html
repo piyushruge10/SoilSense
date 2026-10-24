@@ -24,9 +24,9 @@
     <article class="panel community-card">
       <div class="community-card-heading"><div class="grower-avatar">{{ item.profile.user.username|first|upper }}</div><div><h3>{{ item.profile.user.username }}</h3><span class="live-pill"><i></i> SHARING LIVE</span></div><a class="view-profile" href="{% url 'shared-soil' item.profile.token %}" aria-label="View {{ item.profile.user.username }}'s soil readings">↗</a></div>
       <div class="community-metrics">
-        <div><span>TEMPERATURE</span><strong>{% if item.latest %}{{ item.latest.temperature|floatformat:1 }} °C{% else %}--{% endif %}</strong></div>
-        <div><span>HUMIDITY</span><strong>{% if item.latest %}{{ item.latest.humidity|floatformat:1 }}%{% else %}--{% endif %}</strong></div>
-        <div><span>MOISTURE</span><strong>{% if item.latest %}{{ item.latest.moisture|floatformat:1 }}%{% else %}--{% endif %}</strong></div>
+        <div><span>TEMPERATURE</span><strong>{% if item.latest and item.latest.temperature is not None %}{{ item.latest.temperature|floatformat:1 }} °C{% elif item.latest %}<em>No sensor readings found</em>{% else %}--{% endif %}</strong></div>
+        <div><span>HUMIDITY</span><strong>{% if item.latest and item.latest.humidity is not None %}{{ item.latest.humidity|floatformat:1 }}%{% elif item.latest %}<em>No sensor readings found</em>{% else %}--{% endif %}</strong></div>
+        <div><span>MOISTURE</span><strong>{% if item.latest and item.latest.moisture is not None %}{{ item.latest.moisture|floatformat:1 }}%{% elif item.latest %}<em>No sensor readings found</em>{% else %}--{% endif %}</strong></div>
       </div>
       <div class="community-card-footer"><span>{% if item.latest %}Updated {{ item.latest.recorded_at|date:"M j, H:i" }}{% else %}Waiting for first reading{% endif %}</span>{% if item.profile.user_id == request.user.id %}<span class="owner-label">YOUR STATION</span>{% endif %}</div>
     </article>

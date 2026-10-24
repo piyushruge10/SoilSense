@@ -1,5 +1,5 @@
 {% load static %}
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES = `pages-${VERSION}`;
 const ASSETS = `assets-${VERSION}`;
 const DATA = `data-${VERSION}`;
@@ -9,6 +9,7 @@ const CACHEABLE_PAGES = ["{% url 'dashboard' %}", "{% url 'plants' %}", "{% url 
 const PRECACHE = [
   OFFLINE_URL,
   "{% static 'core/styles.css' %}",
+  "{% static 'core/serial.js' %}",
   "{% static 'core/icons/icon-192.png' %}",
 ];
 const NAV_TIMEOUT = 6000;

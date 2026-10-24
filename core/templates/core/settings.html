@@ -1,19 +1,18 @@
 {% extends "core/base.html" %}
 {% block title %}Settings{% endblock %}
 {% block content %}
-<section class="page-heading"><div><p class="eyebrow">WORKSPACE / SETTINGS</p><h1>Sensor settings</h1><p class="subtitle">Configure the serial connection and the care threshold sent to your Arduino.</p></div></section>
+<section class="page-heading"><div><p class="eyebrow">WORKSPACE / SETTINGS</p><h1>Sensor settings</h1><p class="subtitle">Configure your Arduino connection and the care threshold sent to its sensors.</p></div></section>
 <section class="panel settings-panel">
-  <div class="panel-heading"><div><h2>Arduino connection</h2><p>Use the port assigned to your Arduino UNO.</p></div><span class="connection {% if serial_status.connected %}online{% endif %}"><span class="status-dot"></span>{% if serial_status.connected %}Connected{% elif serial_status.port %}Connecting{% else %}Not connected{% endif %}</span></div>
-  {% if serial_status.error %}<div class="serial-error"><p>{{ serial_status.error }}</p><form method="post">{% csrf_token %}<button class="button button-secondary" type="submit" name="action" value="retry">Retry connection</button></form></div>{% endif %}
-  <form method="post" class="settings-form">{% csrf_token %}
+  <div class="panel-heading"><div><h2>Arduino connection</h2><p>Plug in your Arduino UNO and press Connect. Your browser asks you to pick the device once and remembers it.</p></div><span class="connection" id="connection"><span class="status-dot"></span><span>No sensor connected</span></span></div>
+  <div class="serial-connect-row"><button class="button button-outline" type="button" data-serial-connect>⚡ Connect Arduino (USB)</button><small class="text-link" data-serial-note></small></div>
+  <form method="post" class="settings-form" data-send-settings>{% csrf_token %}
     {% if form.non_field_errors %}<div class="error-banner">{{ form.non_field_errors }}</div>{% endif %}
     <div class="form-grid">
-      <div class="field"><label for="{{ form.port.id_for_label }}">Serial port</label>{{ form.port }}<datalist id="serial-port-options">{% for port in available_ports %}<option value="{{ port.device }}">{{ port.description }}</option>{% endfor %}</datalist><small>{% if available_ports %}Detected: {% for port in available_ports %}{{ port.device }}{% if not forloop.last %}, {% endif %}{% endfor %}. Close serial monitors before connecting.{% else %}No serial devices detected. Connect the Arduino and check Device Manager for its COM number.{% endif %}</small>{{ form.port.errors }}</div>
-      <div class="field"><label for="{{ form.baud_rate.id_for_label }}">Baud rate</label>{{ form.baud_rate }}<small>Must match the Arduino sketch (default 9600).</small>{{ form.baud_rate.errors }}</div>
+      <div class="field"><label for="{{ form.baud_rate.id_for_label }}">Baud rate</label>{{ form.baud_rate }}<small>Must match the Arduino sketch (default 9600). Applies on the next connect.</small>{{ form.baud_rate.errors }}</div>
       <div class="field"><label for="{{ form.moisture_threshold.id_for_label }}">Moisture threshold (%)</label>{{ form.moisture_threshold }}<small>Alert threshold sent to the board.</small>{{ form.moisture_threshold.errors }}</div>
       <div class="field"><label for="{{ form.sample_interval.id_for_label }}">Sample interval (seconds)</label>{{ form.sample_interval }}<small>How often the board should report.</small>{{ form.sample_interval.errors }}</div>
     </div>
-    <div class="protocol-note">The app accepts CSV readings (<code>temperature,humidity,moisture</code>) or JSON with those three fields, one reading per line. Settings are sent as <code>SET,threshold,interval</code>.</div>
+    <div class="protocol-note">One reading per line: CSV (<code>temperature,humidity,moisture</code>) or JSON. A sensor that isn't responding can be sent as <code>nan</code> or left empty (e.g. <code>,60,37</code>). Settings are sent to the board as <code>SET,threshold,interval</code>.</div>
     <button class="button button-primary" type="submit">Save and send settings</button>
   </form>
 </section>
@@ -45,4 +44,13 @@
   <div class="panel-heading"><div><h2>Account</h2><p>Sign out of this SoilSense account on this device.</p></div></div>
   <form method="post" action="{% url 'logout' %}" class="logout-form">{% csrf_token %}<button type="submit" class="button button-secondary">Log out</button></form>
 </section>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.addEventListener("soil:status", event => {
+    const pill = document.getElementById("connection");
+    pill.classList.toggle("online", event.detail.connected);
+    pill.lastElementChild.textContent = event.detail.text;
+  });
+</script>
 {% endblock %}

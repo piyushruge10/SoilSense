@@ -19,3 +19,9 @@ body.dark-theme{background:#17211a;color:#e3ebe3;--border:#35433a;--muted:#9eaaa
 @media(max-width:760px){.chart-toolbar{flex-direction:column}.chart-actions{justify-content:flex-start}.dashboard-status{justify-items:start}.plant-filter-panel{grid-template-columns:repeat(2,minmax(0,1fr))}.plant-filter-search{grid-column:1/-1}.plant-filter-panel .match-filter{grid-column:1/-1}}
 @media(max-width:650px){.chart-actions{width:100%}.chart-actions select{flex:1}.chart-actions .button{flex:1}.trend-summary{gap:12px;justify-content:space-between}.chart-footer{font-size:9px}.plant-filter-panel{grid-template-columns:1fr 1fr;padding:13px}.plant-filter-search{grid-column:1/-1}.random-plant-button{align-self:flex-start}.plant-library-toolbar{align-items:flex-start}.export-button{min-width:58px}}
 .offline-banner{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:6;padding:10px 16px;border-radius:9px;background:#263d2d;color:#fff;font-size:12px;box-shadow:0 8px 24px rgba(20,40,25,.2)}.offline-banner[hidden]{display:none}
+.metric-card.no-data{border-style:dashed}
+.metric-card.no-data .metric-value span{font:600 13px "Segoe UI",Arial,sans-serif;letter-spacing:0;color:#ad6841}
+.metric-card.no-data .metric-value small{display:none}
+.metric-card.no-data .metric-icon{opacity:.45}
+.dark-theme .metric-card.no-data .metric-value span{color:#e0a97f}
+.serial-connect-row{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}

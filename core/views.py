@@ -1,23 +1,27 @@
 import csv
-from datetime import timedelta
 import json
 import uuid
-from .serial_monitor import SerialMonitor, available_serial_ports, serial_monitor_for
-from django.views.decorators.csrf import csrf_exempt
+from datetime import timedelta, timezone as dt_timezone
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
+from django.templatetags.static import static
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-from .serial_monitor import SerialMonitor, available_serial_ports, serial_monitor_for    
+
 from .forms import SerialConfigurationForm
 from .models import PlantCare, SensorData, SerialConfiguration, SharedSoilSettings
-from .serial_monitor import available_serial_ports, serial_monitor_for
+from .readings import parse_reading
+
+MAX_BATCH = 500
 
 
 def _configuration(user):
@@ -29,12 +33,9 @@ def _configuration(user):
             unassigned.user = user
             unassigned.save(update_fields=["user"])
             configuration = unassigned
-        if configuration.ingest_key is None:
-            configuration.ingest_key = uuid.uuid4()
-            configuration.save(update_fields=["ingest_key"])
-    serial_monitor_for(user.pk).configure(
-        configuration.port, configuration.baud_rate, user.pk
-    )
+    if configuration.ingest_key is None:
+        configuration.ingest_key = uuid.uuid4()
+        configuration.save(update_fields=["ingest_key"])
     return configuration
 
 
@@ -42,15 +43,17 @@ def dashboard(request):
     readings = list(SensorData.objects.filter(user=request.user)[:24])
     readings.reverse()
     latest = readings[-1] if readings else None
-    return render(
-        request,
-        "core/dashboard.html",
-        {
-            "latest": latest,
-            "readings": readings,
-            "serial_status": serial_monitor_for(request.user.pk).status(),
-        },
-    )
+    return render(request, "core/dashboard.html", {"latest": latest, "readings": readings})
+
+
+def _matches(plant, latest):
+    checks = [
+        (latest.temperature, plant.temperature_min, plant.temperature_max),
+        (latest.humidity, plant.humidity_min, plant.humidity_max),
+        (latest.moisture, plant.moisture_min, plant.moisture_max),
+    ]
+    present = [(value, low, high) for value, low, high in checks if value is not None]
+    return bool(present) and all(low <= value <= high for value, low, high in present)
 
 
 def plants(request):
@@ -88,13 +91,7 @@ def plants(request):
     plant_entries = list(plant_list)
     matching_plant_ids = set()
     if latest:
-        matching_plant_ids = {
-            plant.pk
-            for plant in plant_entries
-            if plant.temperature_min <= latest.temperature <= plant.temperature_max
-            and plant.humidity_min <= latest.humidity <= plant.humidity_max
-            and plant.moisture_min <= latest.moisture <= plant.moisture_max
-        }
+        matching_plant_ids = {plant.pk for plant in plant_entries if _matches(plant, latest)}
         if match_soil:
             plant_entries = [
                 plant for plant in plant_entries if plant.pk in matching_plant_ids
@@ -216,43 +213,18 @@ def shared_soil_page(request, token):
 
 def settings_page(request):
     configuration = _configuration(request.user)
-    monitor = serial_monitor_for(request.user.pk)
     if request.method == "POST":
-        if request.POST.get("action") == "retry":
-            if configuration.port:
-                monitor.reconnect()
-                messages.info(request, f"Retrying connection to {configuration.port}.")
-            else:
-                messages.error(request, "Select and save a serial port before retrying.")
-            return redirect("settings")
         form = SerialConfigurationForm(request.POST, instance=configuration)
         if form.is_valid():
-            configuration = form.save()
-            monitor.configure(configuration.port, configuration.baud_rate, request.user.pk)
-            if configuration.port:
-                try:
-                    monitor.send_configuration(
-                        configuration.moisture_threshold, configuration.sample_interval
-                    )
-                except RuntimeError as exc:
-                    messages.error(request, str(exc))
-                else:
-                    messages.success(request, "Settings saved and queued for the Arduino.")
-            else:
-                messages.success(request, "Settings saved. Add a serial port to connect the Arduino.")
+            form.save()
+            messages.success(request, "Settings saved. They are sent to your Arduino while it is connected.")
             return redirect("settings")
     else:
         form = SerialConfigurationForm(instance=configuration)
-    return render(
-        request,
-        "core/settings.html",
-        {
-            "form": form,
-            "serial_status": monitor.status(),
-            "available_ports": available_serial_ports(),
-            "ingest_key": configuration.ingest_key
-        },
-    )
+    return render(request, "core/settings.html", {
+        "form": form,
+        "ingest_key": configuration.ingest_key,
+    })
 
 
 @require_GET
@@ -281,9 +253,9 @@ def sensor_data_api(request):
             writer.writerow(
                 [
                     reading.recorded_at.isoformat(),
-                    reading.temperature,
-                    reading.humidity,
-                    reading.moisture,
+                    "" if reading.temperature is None else reading.temperature,
+                    "" if reading.humidity is None else reading.humidity,
+                    "" if reading.moisture is None else reading.moisture,
                 ]
             )
         return response
@@ -291,19 +263,15 @@ def sensor_data_api(request):
     readings = list(reading_query[:500])
     readings.reverse()
     latest = SensorData.objects.filter(user=request.user).first()
-    status = serial_monitor_for(request.user.pk).status()
     fresh_window = timedelta(seconds=max(30, configuration.sample_interval * 3))
     receiving = latest is not None and timezone.now() - latest.recorded_at < fresh_window
-    return JsonResponse(
-        {
-            "connected": status["connected"] or receiving,
-            "port": configuration.port,
-            "error": "" if (receiving or not configuration.port) else status["error"],
-            "period": period,
-            "latest": _serialize_reading(latest),
-            "readings": [_serialize_reading(reading) for reading in readings],
-        }
-    )
+    return JsonResponse({
+        "connected": receiving,
+        "error": "",
+        "period": period,
+        "latest": _serialize_reading(latest),
+        "readings": [_serialize_reading(reading) for reading in readings],
+    })
 
 def _serialize_reading(reading):
     if reading is None:
@@ -328,7 +296,7 @@ def ingest_api(request):
         return JsonResponse({"error": "invalid key"}, status=401)
     try:
         data = json.loads(request.body)
-        reading = SerialMonitor._parse_reading(json.dumps(data))
+        reading = parse_reading(data)
     except (ValueError, TypeError):
         reading = None
     if reading is None:
@@ -339,38 +307,62 @@ def ingest_api(request):
     )
     return JsonResponse({"ok": True}, status=201)
 
+
+def _client_time(value, now):
+    """Use the browser's timestamp for offline readings when it is plausible."""
+    try:
+        parsed = parse_datetime(value) if isinstance(value, str) else None
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        return now
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, dt_timezone.utc)
+    if parsed > now + timedelta(minutes=5) or parsed < now - timedelta(days=30):
+        return now
+    return parsed
+
+
 @require_POST
 def browser_ingest_api(request):
     try:
         payload = json.loads(request.body)
     except ValueError:
         payload = None
-    reading = (
-        SerialMonitor._parse_reading(json.dumps(payload))
-        if isinstance(payload, dict)
-        else None
-    )
-    if reading is None:
-        return JsonResponse({"error": "invalid reading"}, status=400)
-    configuration, _ = SerialConfiguration.objects.get_or_create(user=request.user)
-    SensorData.objects.create(
-        user=request.user,
-        temperature=reading[0],
-        humidity=reading[1],
-        moisture=reading[2],
-    )
-    return JsonResponse(
-        {
-            "ok": True,
-            "settings": {
-                "moisture_threshold": configuration.moisture_threshold,
-                "sample_interval": configuration.sample_interval,
-            },
-        },
-        status=201,
-    )
+    if isinstance(payload, dict) and isinstance(payload.get("readings"), list):
+        items = payload["readings"][:MAX_BATCH]
+    elif isinstance(payload, dict):
+        items = [payload]
+    else:
+        items = []
 
-from django.templatetags.static import static
+    now = timezone.now()
+    rows, skipped = [], 0
+    for item in items:
+        reading = parse_reading(item) if isinstance(item, dict) else None
+        if reading is None:
+            skipped += 1
+            continue
+        rows.append(SensorData(
+            user=request.user,
+            temperature=reading[0],
+            humidity=reading[1],
+            moisture=reading[2],
+            recorded_at=_client_time(item.get("recorded_at"), now),
+        ))
+    if not rows:
+        return JsonResponse({"error": "invalid reading"}, status=400)
+    SensorData.objects.bulk_create(rows)
+    configuration = _configuration(request.user)
+    return JsonResponse({
+        "ok": True,
+        "accepted": len(rows),
+        "skipped": skipped,
+        "settings": {
+            "moisture_threshold": configuration.moisture_threshold,
+            "sample_interval": configuration.sample_interval,
+        },
+    }, status=201)
 
 
 @require_GET
